@@ -35,3 +35,4 @@ chmod -R 777 /var/www/html/uploads
 
 echo "[STARTUP] Starting Apache foreground on port ${LISTEN_PORT}..."
 exec apache2-foreground
+

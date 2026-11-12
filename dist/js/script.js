@@ -34,28 +34,46 @@ $(document).ready(function() {
             data: $(this).serialize(),
             error: err => {
                 console.log(err)
-
+                var _frm = $('#login-frm')
+                var _msg = "<div class='alert alert-danger text-white err_msg'><i class='fa fa-exclamation-triangle'></i> Connection error. Please check server status.</div>"
+                _frm.prepend(_msg)
+                end_loader()
             },
             success: function(resp) {
-                if (resp) {
-                    resp = JSON.parse(resp)
-                    if (resp.status == 'success') {
+                var data = null;
+                try {
+                    data = typeof resp === 'object' ? resp : JSON.parse(resp)
+                } catch(e) {
+                    console.error("Invalid JSON response:", resp)
+                }
+                if (data) {
+                    if (data.status == 'success') {
                         location.replace(_base_url_ + 'admin/index.php');
-                    } else if (resp.status == 'incorrect') {
+                    } else if (data.status == 'incorrect') {
                         var _frm = $('#login-frm')
                         var _msg = "<div class='alert alert-danger text-white err_msg'><i class='fa fa-exclamation-triangle'></i> Incorrect username or password</div>"
                         _frm.prepend(_msg)
                         _frm.find('input').addClass('is-invalid')
                         $('[name="username"]').focus()
-                    } else if (resp.status == 'notverified') {
+                    } else if (data.status == 'notverified') {
                         var _frm = $('#login-frm')
                         var _msg = "<div class='alert alert-danger text-white err_msg'><i class='fa fa-exclamation-triangle'></i> Your Account is not yet verified.</div>"
                         _frm.prepend(_msg)
                         _frm.find('input').addClass('is-invalid')
                         $('[name="username"]').focus()
+                    } else {
+                        var _frm = $('#login-frm')
+                        var _errMsg = data.error || data.msg || "Login failed. Please verify database connection.";
+                        var _msg = "<div class='alert alert-danger text-white err_msg'><i class='fa fa-exclamation-triangle'></i> " + _errMsg + "</div>"
+                        _frm.prepend(_msg)
+                        _frm.find('input').addClass('is-invalid')
                     }
-                    end_loader()
+                } else {
+                    var _frm = $('#login-frm')
+                    var _msg = "<div class='alert alert-danger text-white err_msg'><i class='fa fa-exclamation-triangle'></i> Server returned invalid response. Check database setup.</div>"
+                    _frm.prepend(_msg)
                 }
+                end_loader()
             }
         })
     })

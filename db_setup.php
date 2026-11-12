@@ -9,12 +9,13 @@ ini_set('display_errors', 1);
 require_once(__DIR__ . '/initialize.php');
 require_once(__DIR__ . '/classes/DBConnection.php');
 
-$db_host = defined('DB_SERVER') ? DB_SERVER : (getenv('DB_SERVER') ?: 'localhost');
-$db_port = defined('DB_PORT') ? (int)DB_PORT : (int)(getenv('DB_PORT') ?: 3306);
-$db_user = defined('DB_USERNAME') ? DB_USERNAME : (getenv('DB_USERNAME') ?: 'root');
-$db_pass = defined('DB_PASSWORD') ? DB_PASSWORD : (getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '');
-$db_name = defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: 'orrs_db');
-$db_ssl  = defined('DB_SSL') ? (bool)DB_SSL : (getenv('DB_SSL') !== false ? filter_var(getenv('DB_SSL'), FILTER_VALIDATE_BOOLEAN) : ($db_host !== 'localhost' && $db_host !== '127.0.0.1'));
+// Support manual override from form
+$db_host = !empty($_REQUEST['db_host']) ? trim($_REQUEST['db_host']) : (defined('DB_SERVER') ? DB_SERVER : (getenv('DB_SERVER') ?: 'localhost'));
+$db_port = !empty($_REQUEST['db_port']) ? (int)$_REQUEST['db_port'] : (defined('DB_PORT') ? (int)DB_PORT : (int)(getenv('DB_PORT') ?: 3306));
+$db_user = !empty($_REQUEST['db_user']) ? trim($_REQUEST['db_user']) : (defined('DB_USERNAME') ? DB_USERNAME : (getenv('DB_USERNAME') ?: 'root'));
+$db_pass = isset($_REQUEST['db_pass']) ? $_REQUEST['db_pass'] : (defined('DB_PASSWORD') ? DB_PASSWORD : (getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : ''));
+$db_name = !empty($_REQUEST['db_name']) ? trim($_REQUEST['db_name']) : (defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: 'orrs_db'));
+$db_ssl  = isset($_REQUEST['db_ssl']) ? filter_var($_REQUEST['db_ssl'], FILTER_VALIDATE_BOOLEAN) : (defined('DB_SSL') ? (bool)DB_SSL : (getenv('DB_SSL') !== false ? filter_var(getenv('DB_SSL'), FILTER_VALIDATE_BOOLEAN) : ($db_host !== 'localhost' && $db_host !== '127.0.0.1')));
 
 $sql_file = __DIR__ . '/database/orrs_db.sql';
 
@@ -86,7 +87,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
     } else {
         $sql_content = file_get_contents($sql_file);
         
-        // Remove comments
         $lines = explode("\n", $sql_content);
         $clean_sql = "";
         foreach ($lines as $line) {
@@ -97,7 +97,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
             $clean_sql .= $line . "\n";
         }
 
-        // Split queries by semicolon outside quotes
         $conn->query("SET FOREIGN_KEY_CHECKS = 0;");
         $conn->query("SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';");
 
@@ -111,7 +110,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
                 if ($conn->query($query)) {
                     $executed++;
                 } else {
-                    // Ignore benign errors like table already exists if drop table was missing
                     if ($conn->errno !== 1050 && $conn->errno !== 1060) {
                         $errors[] = $conn->error;
                     }
@@ -245,11 +243,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
 
         <?php if (!$connection_status): ?>
             <div class="alert alert-warning border-0" role="alert">
-                <h6 class="alert-heading"><i class="fa-solid fa-plug-circle-xmark me-2"></i> Database Connection Error</h6>
+                <h6 class="alert-heading"><i class="fa-solid fa-plug-circle-xmark me-2"></i> Database Connection Error: Cannot Connect to Aiven</h6>
                 <p class="mb-1 small font-monospace"><?= htmlspecialchars($connection_error ?? 'Unable to connect') ?></p>
                 <hr class="my-2">
-                <p class="mb-0 small text-muted">
-                    Make sure your Aiven MySQL credentials (DB_SERVER, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_NAME) are set properly in Render Environment Variables.
+                <p class="mb-0 small text-dark">
+                    <strong>Bhai dhyaan dein:</strong> Render ke Environment Variables me <code>DB_SERVER</code> missing hai ya abhi tak <code>localhost</code> par set hai.<br>
+                    Apne Render Dashboard me jakar <code>DB_SERVER</code> me apna <strong>Aiven Hostname</strong> (e.g. <code>mysql-xxxxx.aivencloud.com</code>) zaroor daalein!
                 </p>
             </div>
         <?php endif; ?>
@@ -259,7 +258,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
             <div class="col-md-6">
                 <div class="info-tile">
                     <div class="text-muted small mb-1"><i class="fa-solid fa-server me-1"></i> Host / Server</div>
-                    <div class="fw-bold font-monospace text-truncate"><?= htmlspecialchars($db_host) ?>:<?= htmlspecialchars($db_port) ?></div>
+                    <div class="fw-bold font-monospace text-truncate <?= ($db_host === 'localhost') ? 'text-warning' : 'text-success' ?>">
+                        <?= htmlspecialchars($db_host) ?>:<?= htmlspecialchars($db_port) ?>
+                        <?php if ($db_host === 'localhost'): ?>
+                            <span class="badge bg-warning text-dark ms-2">Needs Aiven Host!</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -328,6 +332,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && 
             <div>
                 <form method="POST" style="display:inline;">
                     <input type="hidden" name="action" value="import_sql">
+                    <input type="hidden" name="db_host" value="<?= htmlspecialchars($db_host) ?>">
+                    <input type="hidden" name="db_port" value="<?= htmlspecialchars($db_port) ?>">
+                    <input type="hidden" name="db_user" value="<?= htmlspecialchars($db_user) ?>">
+                    <input type="hidden" name="db_pass" value="<?= htmlspecialchars($db_pass) ?>">
+                    <input type="hidden" name="db_name" value="<?= htmlspecialchars($db_name) ?>">
+                    <input type="hidden" name="db_ssl" value="<?= $db_ssl ? 'true' : 'false' ?>">
                     <button type="submit" class="btn btn-success px-4" <?= !$connection_status ? 'disabled' : '' ?>>
                         <i class="fa-solid fa-file-import me-1"></i> 
                         <?= empty($tables_found) ? '1-Click Import Database (.SQL)' : 'Re-Import Database (.SQL)' ?>

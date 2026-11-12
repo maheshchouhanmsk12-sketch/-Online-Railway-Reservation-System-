@@ -90,12 +90,17 @@ $action = !isset($_GET['f']) ? 'none' : strtolower($_GET['f']);
 $auth = new Login();
 switch ($action) {
 	case 'login':
+		if (ob_get_length()) ob_clean();
+		header('Content-Type: application/json');
 		echo $auth->login();
 		break;
 	case 'logout':
 		echo $auth->logout();
 		break;
 	case 'client_login':
+	case 'clogin':
+		if (ob_get_length()) ob_clean();
+		header('Content-Type: application/json');
 		echo $auth->client_login();
 		break;
 	case 'client_logout':

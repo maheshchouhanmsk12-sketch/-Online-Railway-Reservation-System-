@@ -35,3 +35,4 @@ EXPOSE 80
 
 # Run Apache via startup script
 CMD ["/var/www/html/start.sh"]
+
