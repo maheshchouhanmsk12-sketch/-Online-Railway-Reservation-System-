@@ -1,0 +1,26 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Pass Authorization header
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Determine scheme (reverse proxy HTTPS vs HTTP)
+RewriteCond %{HTTP:X-Forwarded-Proto} =https [NC,OR]
+RewriteCond %{HTTPS} on
+RewriteRule ^ - [E=PROTO:https]
+RewriteCond %{ENV:PROTO} ^$
+RewriteRule ^ - [E=PROTO:http]
+
+# Fix trailing slash on directories without leaking internal port (e.g. :10000)
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_URI} !/$
+RewriteCond %{HTTP_HOST} ^([^:]+)
+RewriteRule ^(.*)$ %{ENV:PROTO}://%1/$1/ [R=301,L]
+
+# Prevent directory browsing
+Options -Indexes
+
+# CORS Header
+Header set Access-Control-Allow-Origin "*"
+</IfModule>

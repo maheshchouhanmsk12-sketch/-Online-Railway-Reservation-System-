@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: orrs-railway-system
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: DB_SERVER
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      - key: BASE_URL
+        sync: false
