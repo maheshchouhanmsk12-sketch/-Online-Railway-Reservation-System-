@@ -25,6 +25,9 @@ class DBConnection{
         $this->ssl = defined('DB_SSL') ? (bool)DB_SSL : (getenv('DB_SSL') !== false ? filter_var(getenv('DB_SSL'), FILTER_VALIDATE_BOOLEAN) : ($this->host !== 'localhost' && $this->host !== '127.0.0.1'));
 
         if (!isset($this->conn) || !$this->conn) {
+            // Prevent uncaught mysqli_sql_exception in PHP 8.1+
+            @mysqli_report(MYSQLI_REPORT_OFF);
+
             $mysqli = mysqli_init();
             if (!$mysqli) {
                 $this->error = 'mysqli_init failed';
@@ -35,21 +38,26 @@ class DBConnection{
             // Connection timeout (10 seconds)
             $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
 
-            if ($this->ssl) {
-                // Aiven Cloud requires SSL (require_secure_transport=ON)
-                $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
-                $flags = MYSQLI_CLIENT_SSL;
-                $connected = @$mysqli->real_connect($this->host, $this->username, $this->password, $this->database, $this->port, NULL, $flags);
-            } else {
-                $connected = @$mysqli->real_connect($this->host, $this->username, $this->password, $this->database, $this->port);
-            }
+            try {
+                if ($this->ssl) {
+                    // Aiven Cloud requires SSL (require_secure_transport=ON)
+                    $mysqli->ssl_set(NULL, NULL, NULL, NULL, NULL);
+                    $flags = MYSQLI_CLIENT_SSL;
+                    $connected = @$mysqli->real_connect($this->host, $this->username, $this->password, $this->database, $this->port, NULL, $flags);
+                } else {
+                    $connected = @$mysqli->real_connect($this->host, $this->username, $this->password, $this->database, $this->port);
+                }
 
-            if (!$connected) {
-                $this->error = mysqli_connect_error();
+                if (!$connected) {
+                    $this->error = mysqli_connect_error();
+                    $this->conn = false;
+                } else {
+                    $mysqli->set_charset("utf8mb4");
+                    $this->conn = $mysqli;
+                }
+            } catch (Throwable $e) {
+                $this->error = $e->getMessage();
                 $this->conn = false;
-            } else {
-                $mysqli->set_charset("utf8mb4");
-                $this->conn = $mysqli;
             }
         }
     }

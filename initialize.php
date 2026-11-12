@@ -13,8 +13,8 @@ if (!empty($env_base_url)) {
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $script_dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
     $script_dir = preg_replace('#/(admin|classes|database|inc|plugins|uploads).*$#', '', $script_dir);
-    $script_dir = trim($script_dir, '/');
-    $auto_base_url = $protocol . $host . ($script_dir ? '/' . $script_dir : '') . '/';
+    $script_dir = trim($script_dir, '/.');
+    $auto_base_url = $protocol . $host . ($script_dir !== '' ? '/' . $script_dir : '') . '/';
 }
 
 if(!defined('base_url')) define('base_url', $auto_base_url);

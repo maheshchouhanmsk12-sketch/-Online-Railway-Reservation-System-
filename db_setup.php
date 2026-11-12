@@ -27,6 +27,7 @@ $import_result = null;
 
 // Connect to Database
 try {
+    @mysqli_report(MYSQLI_REPORT_OFF);
     $mysqli = mysqli_init();
     if ($mysqli) {
         $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 8);
@@ -71,7 +72,7 @@ try {
 }
 
 // Handle 1-Click Import Action
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_sql') {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_sql') {
     if (!$conn) {
         $import_result = [
             'status' => 'error',
